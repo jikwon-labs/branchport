@@ -1,6 +1,6 @@
 # Branchport
 
-Branchport is a Chrome extension for macOS that shows which Git worktree and branch is serving each localhost port.
+Branchport is a Chrome extension for macOS, Linux, and Windows that shows which Git worktree and branch is serving each localhost port.
 
 It adds a small label to localhost pages, prefixes tab titles with the current branch, groups tabs by worktree, and provides a popup for inspecting and managing local development servers.
 
@@ -15,10 +15,13 @@ It adds a small label to localhost pages, prefixes tab titles with the current b
 
 ## Requirements
 
-- macOS
+- macOS, Linux, or Windows
 - Google Chrome
 - Node.js 20 or newer
-- `git` and `lsof`, included with the expected macOS development environment
+- `git`
+- macOS: `lsof`
+- Linux: `ss` (recommended) or `lsof`
+- Windows: PowerShell 5.1 or newer
 
 ## Install
 
@@ -69,11 +72,17 @@ Visible tabs refresh every 5 seconds and hidden tabs every 30 seconds. Concurren
 
 All data and actions stay on the local machine. The helper exposes only `/health` publicly; repository and process endpoints require the fixed Branchport Chrome extension origin and request token.
 
+## Platform support
+
+- macOS uses `lsof` and installs a LaunchAgent.
+- Linux uses `/proc` plus `ss` or `lsof` and installs a systemd user service.
+- Windows uses `Get-NetTCPConnection` and `Win32_Process` and installs a per-user scheduled task.
+
 ## Limitations
 
-- Only macOS is currently supported.
 - Servers running outside a Git worktree are not listed.
 - A server whose listening process has a different working directory may not be detected.
+- Windows does not expose another process's current working directory through `Win32_Process`; Branchport validates absolute paths found in the listening process and up to eight parent command lines. Servers launched without a project path in that chain may not be detected.
 - The helper port is currently fixed at `32190` in both the helper and extension.
 
 ## License

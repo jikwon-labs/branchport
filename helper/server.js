@@ -1,11 +1,9 @@
 import http from "node:http";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { inspectAllPorts, inspectPort } from "./git-info.js";
+import { openLocalAction } from "./platform.js";
 
 const HOST = "127.0.0.1";
 const HELPER_PORT = Number(process.env.LOCAL_WORKTREE_HELPER_PORT || 32190);
-const execFileAsync = promisify(execFile);
 const lookupCache = new Map();
 const LOOKUP_CACHE_MS = 2000;
 const EXTENSION_ORIGIN = "chrome-extension://gclkmofklkhonlkneebngbdiblebeekk";
@@ -119,17 +117,10 @@ const server = http.createServer(async (request, response) => {
       if (!current || current.pid !== Number(pid)) {
         return sendJson(request, response, 409, { error: "The process no longer matches this port" });
       }
-      if (action === "finder") await execFileAsync("open", [current.cwd]);
-      else if (action === "terminal") await execFileAsync("open", ["-a", "Terminal", current.cwd]);
-      else if (action === "editor") {
-        try {
-          await execFileAsync("open", ["-a", "Cursor", current.cwd]);
-        } catch {
-          await execFileAsync("open", ["-a", "Visual Studio Code", current.cwd]);
-        }
-      } else {
+      if (!["finder", "terminal", "editor"].includes(action)) {
         return sendJson(request, response, 400, { error: "Unknown action" });
       }
+      await openLocalAction(action, current.cwd);
       return sendJson(request, response, 200, { ok: true });
     } catch (error) {
       return sendJson(request, response, 400, { error: error.message });

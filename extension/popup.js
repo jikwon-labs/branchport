@@ -31,7 +31,7 @@ function serverRow(info) {
   for (const [action, label, errorMessage] of [
     ["editor", "코드로 열기", "에디터를 열지 못했어요."],
     ["terminal", "터미널", "터미널을 열지 못했어요."],
-    ["finder", "Finder", "Finder를 열지 못했어요."],
+    ["finder", "폴더", "폴더를 열지 못했어요."],
   ]) {
     const button = document.createElement("button");
     button.className = "action";

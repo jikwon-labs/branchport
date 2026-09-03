@@ -9,7 +9,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,4 +28,6 @@ jobs:
           node --check extension/content.js
           node --check extension/popup.js
           node --check helper/git-info.js
+          node --check helper/platform.js
           node --check helper/server.js
+          node --check helper/manage-service.js

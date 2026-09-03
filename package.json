@@ -1,6 +1,6 @@
 {
   "name": "branchport",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "description": "See which Git worktree and branch is serving each localhost port.",
@@ -9,8 +9,8 @@
   "type": "module",
   "scripts": {
     "start": "node helper/server.js",
-    "helper:install": "bash helper/install-launch-agent.sh",
-    "helper:uninstall": "bash helper/uninstall-launch-agent.sh",
+    "helper:install": "node helper/manage-service.js install",
+    "helper:uninstall": "node helper/manage-service.js uninstall",
     "test": "node --test"
   },
   "engines": {

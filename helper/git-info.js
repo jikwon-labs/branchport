@@ -1,17 +1,5 @@
-import { execFile } from "node:child_process";
 import path from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
-
-async function run(command, args) {
-  const { stdout } = await execFileAsync(command, args, {
-    encoding: "utf8",
-    timeout: 3000,
-    maxBuffer: 1024 * 1024,
-  });
-  return stdout.trim();
-}
+import { getListeningProcesses, getProcessCwdCandidates, getProcessInfo, parseLsofProcesses, run } from "./platform.js";
 
 export function parsePids(output) {
   return [...new Set(output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger))];
@@ -23,39 +11,19 @@ export function parseLsofCwd(output) {
 }
 
 export function parseListeningProcesses(output) {
-  const byPort = new Map();
-  let pid = null;
-  for (const line of output.split("\n")) {
-    if (line.startsWith("p")) {
-      const value = Number(line.slice(1));
-      pid = Number.isInteger(value) ? value : null;
-      continue;
-    }
-    if (!pid || !line.startsWith("n")) continue;
-    const match = line.match(/:(\d+)(?:$|\s)/);
-    const port = Number(match?.[1]);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) continue;
-    const pids = byPort.get(port) || new Set();
-    pids.add(pid);
-    byPort.set(port, pids);
-  }
-  return byPort;
+  return parseLsofProcesses(output);
 }
 
 export async function findListeningPids(port) {
   try {
-    return parsePids(await run("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"]));
+    return [...(await getListeningProcesses()).get(port) || []];
   } catch {
     return [];
   }
 }
 
 export async function findProcessCwd(pid) {
-  try {
-    return parseLsofCwd(await run("lsof", ["-a", "-p", String(pid), "-d", "cwd", "-Fn"]));
-  } catch {
-    return null;
-  }
+  return (await getProcessCwdCandidates(pid))[0] || null;
 }
 
 async function readGitInfo(cwd) {
@@ -97,19 +65,7 @@ async function readGitInfo(cwd) {
 }
 
 async function readProcessInfo(pid) {
-  try {
-    const output = await run("ps", ["-p", String(pid), "-o", "etime=,rss=,%cpu=,command="]);
-    const match = output.match(/^(\S+)\s+(\d+)\s+([\d.]+)\s+(.+)$/);
-    if (!match) return {};
-    return {
-      uptime: match[1],
-      memoryMb: Math.round(Number(match[2]) / 1024),
-      cpuPercent: Number(match[3]),
-      command: match[4],
-    };
-  } catch {
-    return {};
-  }
+  return getProcessInfo(pid);
 }
 
 async function inspectPortWithContext(port, context = {}) {
@@ -118,17 +74,19 @@ async function inspectPortWithContext(port, context = {}) {
   for (const pid of pids) {
     let cwdPromise = context.cwdByPid?.get(pid);
     if (!cwdPromise) {
-      cwdPromise = findProcessCwd(pid);
+      cwdPromise = getProcessCwdCandidates(pid);
       context.cwdByPid?.set(pid, cwdPromise);
     }
-    const cwd = await cwdPromise;
-    if (!cwd) continue;
-    let gitPromise = context.gitByCwd?.get(cwd);
-    if (!gitPromise) {
-      gitPromise = readGitInfo(cwd);
-      context.gitByCwd?.set(cwd, gitPromise);
+    let git = null;
+    for (const cwd of await cwdPromise) {
+      let gitPromise = context.gitByCwd?.get(cwd);
+      if (!gitPromise) {
+        gitPromise = readGitInfo(cwd);
+        context.gitByCwd?.set(cwd, gitPromise);
+      }
+      git = await gitPromise;
+      if (git) break;
     }
-    const git = await gitPromise;
     if (!git) continue;
     let processPromise = context.processByPid?.get(pid);
     if (!processPromise) {
@@ -147,8 +105,7 @@ export async function inspectPort(port) {
 
 export async function findListeningPorts() {
   try {
-    const output = await run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]);
-    return [...parseListeningProcesses(output).keys()].sort((a, b) => a - b);
+    return [...(await getListeningProcesses()).keys()].sort((a, b) => a - b);
   } catch {
     return [];
   }
@@ -156,7 +113,7 @@ export async function findListeningPorts() {
 
 async function findListeningProcesses() {
   try {
-    return parseListeningProcesses(await run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]));
+    return await getListeningProcesses();
   } catch {
     return new Map();
   }
