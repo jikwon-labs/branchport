@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { box-sizing: border-box; }
+      body { width: 420px; margin: 0; color: #e2e8f0; background: #0f172a; font: 13px/1.4 system-ui, sans-serif; }
+      header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
+      h1 { margin: 0; font-size: 15px; }
+      #refresh { border: 0; color: #93c5fd; background: none; cursor: pointer; }
+      #search { width: calc(100% - 20px); margin: 0 10px 7px; padding: 8px 10px; border: 1px solid #334155; border-radius: 7px; color: #e2e8f0; outline: none; background: #1e293b; }
+      #search:focus { border-color: #60a5fa; }
+      #servers { max-height: 390px; overflow-y: auto; padding: 0 10px 10px; }
+      .server { display: grid; grid-template-columns: 1fr auto; gap: 6px; width: 100%; margin: 5px 0; padding: 6px; border: 1px solid #334155; border-radius: 9px; color: inherit; background: #1e293b; }
+      .server:hover, .server.current { border-color: #60a5fa; background: #172554; }
+      .open { display: grid; grid-template-columns: 52px 1fr auto; gap: 9px; align-items: center; min-width: 0; padding: 4px; border: 0; color: inherit; text-align: left; background: transparent; cursor: pointer; }
+      .kill { align-self: center; padding: 5px 7px; border: 1px solid #7f1d1d; border-radius: 5px; color: #fca5a5; background: #450a0a; cursor: pointer; }
+      .kill:hover { background: #7f1d1d; }
+      .warning { grid-column: 1 / -1; padding: 5px 7px; border-radius: 5px; color: #fed7aa; background: #431407; font-size: 11px; }
+      .metrics { grid-column: 1 / -1; display: flex; gap: 9px; padding: 0 5px; color: #64748b; font: 10px ui-monospace, monospace; }
+      .actions { grid-column: 1 / -1; display: flex; gap: 5px; }
+      .action { padding: 4px 7px; border: 1px solid #475569; border-radius: 5px; color: #cbd5e1; background: #0f172a; cursor: pointer; font-size: 11px; }
+      .action:hover { border-color: #60a5fa; color: white; }
+      .port { color: #93c5fd; font: 700 12px ui-monospace, monospace; }
+      .folder, .branch { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .folder { font-weight: 650; }
+      .branch { color: #94a3b8; font: 11px ui-monospace, monospace; }
+      .state { color: #fbbf24; font-size: 11px; }
+      .empty { padding: 20px 6px; color: #fca5a5; text-align: center; }
+      fieldset { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 0; padding: 11px 16px 14px; border: 0; border-top: 1px solid #334155; color: #cbd5e1; }
+      label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+      select { color: #e2e8f0; border: 1px solid #475569; border-radius: 5px; background: #1e293b; }
+    </style>
+  </head>
+  <body>
+    <header><h1>로컬 서버</h1><button id="refresh">새로고침</button></header>
+    <input id="search" type="search" placeholder="포트, 폴더, 브랜치로 찾기" />
+    <main id="servers"><div class="empty">서버 찾는 중…</div></main>
+    <fieldset>
+      <label><input id="overlay" type="checkbox" /> 페이지에 표시</label>
+      <label><input id="watermark" type="checkbox" /> 화면 워터마크</label>
+      <label><input id="title" type="checkbox" /> 탭에 브랜치 표시</label>
+      <label><input id="autoGroup" type="checkbox" /> 워크트리별 탭 묶기</label>
+      <label>아이콘 배지 <select id="badge"><option value="port">포트</option><option value="branch">브랜치</option></select></label>
+    </fieldset>
+    <script src="popup.js"></script>
+  </body>
+</html>

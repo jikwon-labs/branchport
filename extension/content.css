@@ -1,0 +1,74 @@
+#localhost-worktree-label {
+  all: initial;
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2147483647;
+  display: flex;
+  max-width: min(520px, calc(100vw - 24px));
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  cursor: pointer;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+#localhost-worktree-label span,
+#localhost-worktree-label strong {
+  overflow: hidden;
+  padding: 7px 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#localhost-worktree-label .lwl-folder { border-radius: 7px 0 0 7px; background: #1e293b; }
+#localhost-worktree-label strong { background: var(--branch-color); font-weight: 700; }
+#localhost-worktree-label .lwl-sync { border-radius: 0 7px 7px 0; background: #334155; }
+#localhost-worktree-label[data-copied="true"]::after {
+  content: "복사했어요";
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  padding: 5px 7px;
+  border-radius: 5px;
+  background: #0f172a;
+  color: white;
+  white-space: nowrap;
+}
+
+#localhost-worktree-watermark {
+  all: initial;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 2147483646;
+  width: max-content;
+  max-width: 90vw;
+  color: #dc2626;
+  opacity: 0.075;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  font: 800 clamp(26px, 5vw, 72px)/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: -0.05em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#localhost-worktree-notice {
+  all: initial;
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 2147483647;
+  padding: 10px 14px;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  color: #fff7ed;
+  background: #9a3412;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+  font: 700 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+}

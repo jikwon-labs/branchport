@@ -1,0 +1,19 @@
+{
+  "name": "branchport",
+  "version": "0.2.0",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "description": "See which Git worktree and branch is serving each localhost port.",
+  "repository": "github:wlrnjs/branchport",
+  "keywords": ["chrome-extension", "git", "worktree", "localhost", "developer-tools"],
+  "type": "module",
+  "scripts": {
+    "start": "node helper/server.js",
+    "helper:install": "bash helper/install-launch-agent.sh",
+    "helper:uninstall": "bash helper/uninstall-launch-agent.sh",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
