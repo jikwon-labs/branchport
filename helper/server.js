@@ -1,23 +1,13 @@
 import http from "node:http";
 import { inspectAllPorts, inspectPort } from "./git-info.js";
 import { openLocalAction } from "./platform.js";
+import { extensionOrigin, isExtensionRequest } from "./auth.js";
 
 const HOST = "127.0.0.1";
 const HELPER_PORT = Number(process.env.LOCAL_WORKTREE_HELPER_PORT || 32190);
 const lookupCache = new Map();
 const LOOKUP_CACHE_MS = 2000;
-const EXTENSION_ORIGIN = "chrome-extension://gclkmofklkhonlkneebngbdiblebeekk";
 let serversCache = null;
-
-function extensionOrigin(request) {
-  const origin = request.headers.origin || "";
-  return origin === EXTENSION_ORIGIN ? origin : null;
-}
-
-function isExtensionRequest(request) {
-  return Boolean(extensionOrigin(request))
-    && request.headers["x-localhost-worktree-token"] === "branchport-v1";
-}
 
 async function readBody(request) {
   let body = "";
@@ -35,7 +25,7 @@ function sendJson(request, response, status, body) {
     "Access-Control-Allow-Headers": "Content-Type, X-Localhost-Worktree-Token",
     "Cache-Control": "no-store",
   };
-  const origin = extensionOrigin(request);
+  const origin = extensionOrigin(request.headers);
   if (origin) headers["Access-Control-Allow-Origin"] = origin;
   response.writeHead(status, headers);
   response.end(JSON.stringify(body));
@@ -80,7 +70,7 @@ function inspectAllPortsCached() {
 
 const server = http.createServer(async (request, response) => {
   if (request.method === "OPTIONS") {
-    return extensionOrigin(request)
+    return extensionOrigin(request.headers)
       ? sendJson(request, response, 204, {})
       : sendJson(request, response, 403, { error: "Only the extension may access this helper" });
   }
@@ -88,7 +78,7 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${HOST}:${HELPER_PORT}`);
 
   if (url.pathname === "/kill" && request.method === "POST") {
-    if (!isExtensionRequest(request)) {
+    if (!isExtensionRequest(request.headers)) {
       return sendJson(request, response, 403, { error: "Only the extension may stop a server" });
     }
 
@@ -107,7 +97,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (url.pathname === "/action" && request.method === "POST") {
-    if (!isExtensionRequest(request)) {
+    if (!isExtensionRequest(request.headers)) {
       return sendJson(request, response, 403, { error: "Only the extension may open local apps" });
     }
 
@@ -131,7 +121,7 @@ const server = http.createServer(async (request, response) => {
 
   if (url.pathname === "/health") return sendJson(request, response, 200, { ok: true });
 
-  if (!isExtensionRequest(request)) {
+  if (!isExtensionRequest(request.headers)) {
     return sendJson(request, response, 403, { error: "Only the extension may access this helper" });
   }
 
