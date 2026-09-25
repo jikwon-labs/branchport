@@ -4,6 +4,12 @@
   "version": "0.3.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnmCHo13C672V2IQf6P3AQWkVOY78qOc7mdAFuIdy+w4pV+thsNnS7hPJ7W4tcC4sQvichSH/jyuOQF6BucreHzkmxDmXsqujI/2WDz4tt28frPPiFZlbTaSlIAc6EpsrtlczCUzpJZ13Gac9rq5KTfsJL51t8wc6SzcQ6ZFYE2m8Ivr1ni6+vQTkpsJRZXk3eDkZNbNGq4+GxFzsKGEBk52F6FboKP5hce/gXhD2QplNvi4GpY/LFVoWOHb7XMLJdQxxOYmL2cDdrTvVYucFmc+2ORYksQqdPMCNdlWrOAuR+evwV2YHqOkAwqXJJ7lga7TVjJPXq1qacEmsanX54QIDAQAB",
   "description": "See which Git worktree and branch is serving each localhost port.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": ["tabs", "tabGroups", "storage", "clipboardWrite"],
   "host_permissions": ["http://127.0.0.1:32190/*"],
   "background": {
@@ -11,6 +17,10 @@
   },
   "action": {
     "default_title": "Branchport",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    },
     "default_popup": "popup.html"
   },
   "commands": {

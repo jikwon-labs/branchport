@@ -28,7 +28,8 @@
     "start": "node helper/server.js",
     "helper:install": "node helper/cli.js install",
     "helper:uninstall": "node helper/cli.js uninstall",
-    "test": "node --test"
+    "test": "node --test",
+    "package:extension": "node scripts/package-extension.js"
   },
   "engines": {
     "node": ">=20"

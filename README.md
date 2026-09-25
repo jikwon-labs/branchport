@@ -90,6 +90,7 @@ pnpm start            # Run the helper in the foreground
 pnpm helper:install   # Install or update the helper service from this checkout
 pnpm helper:uninstall # Remove the helper service
 pnpm test             # Run unit tests
+pnpm package:extension # Build the Chrome Web Store zip in dist/
 ```
 
 ## How it works
