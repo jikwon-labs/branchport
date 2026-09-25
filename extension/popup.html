@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <style>
@@ -33,16 +33,18 @@
     </style>
   </head>
   <body>
-    <header><h1>로컬 서버</h1><button id="refresh">새로고침</button></header>
-    <input id="search" type="search" placeholder="포트, 폴더, 브랜치로 찾기" />
-    <main id="servers"><div class="empty">서버 찾는 중…</div></main>
+    <header><h1 data-i18n="serversTitle"></h1><button id="refresh" data-i18n="refresh"></button></header>
+    <input id="search" type="search" />
+    <main id="servers"></main>
     <fieldset>
-      <label><input id="overlay" type="checkbox" /> 페이지에 표시</label>
-      <label><input id="watermark" type="checkbox" /> 화면 워터마크</label>
-      <label><input id="title" type="checkbox" /> 탭에 브랜치 표시</label>
-      <label><input id="autoGroup" type="checkbox" /> 워크트리별 탭 묶기</label>
-      <label>아이콘 배지 <select id="badge"><option value="port">포트</option><option value="branch">브랜치</option></select></label>
+      <label><input id="overlay" type="checkbox" /> <span data-i18n="settingOverlay"></span></label>
+      <label><input id="watermark" type="checkbox" /> <span data-i18n="settingWatermark"></span></label>
+      <label><input id="title" type="checkbox" /> <span data-i18n="settingTitle"></span></label>
+      <label><input id="autoGroup" type="checkbox" /> <span data-i18n="settingAutoGroup"></span></label>
+      <label><span data-i18n="settingBadge"></span> <select id="badge"><option value="port" data-i18n="badgePort"></option><option value="branch" data-i18n="badgeBranch"></option></select></label>
+      <label><span data-i18n="settingLanguage"></span> <select id="language"><option value="auto" data-i18n="languageAuto"></option><option value="en">English</option><option value="ko">한국어</option></select></label>
     </fieldset>
+    <script src="i18n.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

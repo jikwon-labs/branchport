@@ -23,7 +23,7 @@ function showBranchNotice(info) {
   clearTimeout(noticeTimer);
   const notice = document.createElement("div");
   notice.id = NOTICE_ID;
-  notice.textContent = `브랜치가 바뀌었어요 · ${info.branchChangedFrom} → ${info.branch}`;
+  notice.textContent = translate(resolveLanguage(currentConfig?.language), "branchChanged", info.branchChangedFrom, info.branch);
   document.documentElement.append(notice);
   noticeTimer = setTimeout(() => notice.remove(), 7000);
 }
@@ -68,7 +68,8 @@ function render(info, config) {
   label.id = ID;
   label.type = "button";
   label.style.setProperty("--branch-color", colorFor(info));
-  label.title = `${info.cwd}\n${info.branch} (${info.commit})\n클릭하면 경로가 복사돼요`;
+  const language = resolveLanguage(config.language);
+  label.title = translate(language, "labelTitle", info.cwd, info.branch, info.commit);
   const folder = document.createElement("span");
   folder.className = "lwl-folder";
   folder.textContent = info.worktree;
@@ -83,7 +84,7 @@ function render(info, config) {
   }
   label.addEventListener("click", async () => {
     await navigator.clipboard.writeText(info.cwd);
-    label.dataset.copied = "true";
+    label.dataset.copied = translate(language, "copied");
     copiedTimer = setTimeout(() => delete label.dataset.copied, 1000);
   });
   document.documentElement.append(label);
