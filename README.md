@@ -21,7 +21,7 @@ It adds a small label to localhost pages, prefixes tab titles with the current b
 - Stops a server only after revalidating its port and PID
 - Reduces background work with request coalescing, short-lived caching, and visibility-aware polling
 
-    </td>
+</td>
     <td width="42%" valign="top">
       <img src="docs/images/popup.png" alt="Branchport popup listing servers on ports 4000, 5173, and 8080">
     </td>
@@ -59,7 +59,7 @@ The manifest public key keeps the extension ID fixed at `gclkmofklkhonlkneebngbd
 
 Open any `localhost` or `127.0.0.1` page. The page label shows the worktree and branch; clicking it copies the working directory.
 
-The popup lists every detected Git-backed localhost server. Its settings control the page label, watermark, title prefix, automatic tab grouping, and toolbar badge.
+The popup lists every detected Git-backed localhost server. Its settings control the page label, watermark, title prefix, automatic tab grouping, toolbar badge, and language. The language defaults to Chrome's UI language (English or Korean).
 
 - `●`: uncommitted changes
 - `↑2`: two commits ahead of upstream
