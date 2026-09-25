@@ -1,10 +1,19 @@
 {
   "name": "branchport",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "packageManager": "pnpm@10.17.1",
   "description": "See which Git worktree and branch is serving each localhost port.",
-  "repository": "github:wlrnjs/branchport",
-  "keywords": ["chrome-extension", "git", "worktree", "localhost", "developer-tools"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jikwon-labs/branchport.git"
+  },
+  "keywords": [
+    "chrome-extension",
+    "git",
+    "worktree",
+    "localhost",
+    "developer-tools"
+  ],
   "type": "module",
   "bin": {
     "branchport": "helper/cli.js"
