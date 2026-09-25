@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EXTENSION_ORIGIN, extensionOrigin, isExtensionRequest } from "./auth.js";
+import { EXTENSION_ORIGINS, extensionOrigin, isExtensionRequest } from "./auth.js";
 
 const token = { "x-localhost-worktree-token": "branchport-v1" };
 
@@ -8,8 +8,8 @@ test("accepts an extension request that omits Origin", () => {
   assert.equal(isExtensionRequest({ ...token }), true);
 });
 
-test("accepts an extension request that sends the extension origin", () => {
-  assert.equal(isExtensionRequest({ ...token, origin: EXTENSION_ORIGIN }), true);
+test("accepts the Chrome Web Store and unpacked extension origins", () => {
+  for (const origin of EXTENSION_ORIGINS) assert.equal(isExtensionRequest({ ...token, origin }), true);
 });
 
 test("rejects a web page origin", () => {
@@ -23,7 +23,7 @@ test("rejects a missing or wrong token", () => {
 });
 
 test("keeps the preflight origin check strict", () => {
-  assert.equal(extensionOrigin({ origin: EXTENSION_ORIGIN }), EXTENSION_ORIGIN);
+  for (const origin of EXTENSION_ORIGINS) assert.equal(extensionOrigin({ origin }), origin);
   assert.equal(extensionOrigin({}), null);
   assert.equal(extensionOrigin({ origin: "http://localhost:3000" }), null);
 });

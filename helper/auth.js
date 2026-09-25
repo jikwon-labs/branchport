@@ -1,10 +1,15 @@
-export const EXTENSION_ORIGIN = "chrome-extension://gclkmofklkhonlkneebngbdiblebeekk";
+// The Chrome Web Store build gets its ID from the store; an unpacked checkout gets the
+// fixed ID from the manifest "key". Both are the same Branchport extension.
+export const EXTENSION_ORIGINS = [
+  "chrome-extension://lcfgllcanfffllgdbalehgdafanohngb", // Chrome Web Store
+  "chrome-extension://gclkmofklkhonlkneebngbdiblebeekk", // unpacked from this repository
+];
 export const EXTENSION_TOKEN = "branchport-v1";
 
 // Only a real CORS preflight reaches this check, and a preflight always carries an Origin.
 export function extensionOrigin(headers) {
   const origin = headers.origin || "";
-  return origin === EXTENSION_ORIGIN ? origin : null;
+  return EXTENSION_ORIGINS.includes(origin) ? origin : null;
 }
 
 // Chrome omits Origin when the extension service worker fetches a host granted through
@@ -14,6 +19,6 @@ export function extensionOrigin(headers) {
 // that extensionOrigin() rejects for anything but the extension.
 export function isExtensionRequest(headers) {
   const origin = headers.origin;
-  return (!origin || origin === EXTENSION_ORIGIN)
+  return (!origin || EXTENSION_ORIGINS.includes(origin))
     && headers["x-localhost-worktree-token"] === EXTENSION_TOKEN;
 }

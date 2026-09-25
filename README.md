@@ -53,7 +53,7 @@ Then install the extension:
 3. Select **Load unpacked**.
 4. Clone this repository and choose its `extension` directory.
 
-The manifest public key keeps the extension ID fixed at `gclkmofklkhonlkneebngbdiblebeekk`, allowing the helper to accept requests only from Branchport. Reload existing localhost tabs after installation.
+The manifest public key keeps the unpacked extension ID fixed at `gclkmofklkhonlkneebngbdiblebeekk`. The helper accepts requests only from that ID and the Chrome Web Store ID, `lcfgllcanfffllgdbalehgdafanohngb`. Reload existing localhost tabs after installation.
 
 ## Usage
 
