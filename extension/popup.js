@@ -20,6 +20,38 @@ function emptyMessage(...lines) {
   serversElement.replaceChildren(empty);
 }
 
+const INSTALL_COMMAND = "npx branchport install";
+const HELPER_RETRY_MS = 3000;
+let helperRetryTimer = null;
+
+// Shown when the helper cannot be reached, which is also the first thing a new
+// Chrome Web Store user sees before installing it.
+function helperGuide() {
+  const guide = document.createElement("div");
+  guide.className = "guide";
+  const title = document.createElement("div");
+  title.className = "guide-title";
+  title.textContent = t("loadFailed");
+  const command = document.createElement("div");
+  command.className = "command";
+  const code = document.createElement("code");
+  code.textContent = INSTALL_COMMAND;
+  const copy = document.createElement("button");
+  copy.className = "action";
+  copy.textContent = t("copyCommand");
+  copy.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(INSTALL_COMMAND);
+    copy.textContent = t("copied");
+    setTimeout(() => copy.textContent = t("copyCommand"), 1000);
+  });
+  command.append(code, copy);
+  const requirement = document.createElement("div");
+  requirement.className = "guide-note";
+  requirement.textContent = t("helperRequirement");
+  guide.append(title, command, requirement);
+  serversElement.replaceChildren(guide);
+}
+
 function serverRow(info) {
   const row = document.createElement("div");
   row.className = `server${info.port === currentPort ? " current" : ""}`;
@@ -87,6 +119,9 @@ async function loadServers({ showLoading = false } = {}) {
   if (!result?.error || !allServers.length) allServers = result?.servers || [];
   loadFailed = Boolean(result?.error && !allServers.length);
   renderServers();
+  // Keep checking while the guide is up so the list appears as soon as the helper starts.
+  clearTimeout(helperRetryTimer);
+  if (loadFailed) helperRetryTimer = setTimeout(() => loadServers(), HELPER_RETRY_MS);
 }
 
 function renderServers() {
@@ -94,7 +129,7 @@ function renderServers() {
   const servers = allServers.filter((info) => `${info.port} ${info.repository} ${info.worktree} ${info.branch} ${info.cwd}`.toLowerCase().includes(query));
   serversElement.replaceChildren();
   if (!servers.length) {
-    if (loadFailed) emptyMessage(t("loadFailed"), t("loadFailedHint"));
+    if (loadFailed) helperGuide();
     else emptyMessage(t(query ? "noResults" : "noServers"));
     return;
   }
