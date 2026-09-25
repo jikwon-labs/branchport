@@ -1,16 +1,24 @@
 {
   "name": "branchport",
   "version": "0.3.0",
-  "private": true,
   "packageManager": "pnpm@10.17.1",
   "description": "See which Git worktree and branch is serving each localhost port.",
   "repository": "github:wlrnjs/branchport",
   "keywords": ["chrome-extension", "git", "worktree", "localhost", "developer-tools"],
   "type": "module",
+  "bin": {
+    "branchport": "helper/cli.js"
+  },
+  "files": [
+    "helper/*.js",
+    "helper/*.sh",
+    "helper/*.ps1",
+    "!helper/*.test.js"
+  ],
   "scripts": {
     "start": "node helper/server.js",
-    "helper:install": "node helper/manage-service.js install",
-    "helper:uninstall": "node helper/manage-service.js uninstall",
+    "helper:install": "node helper/cli.js install",
+    "helper:uninstall": "node helper/cli.js uninstall",
     "test": "node --test"
   },
   "engines": {
