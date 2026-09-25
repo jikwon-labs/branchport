@@ -1,10 +1,12 @@
+importScripts("i18n.js");
+
 const HELPER = "http://127.0.0.1:32190";
 const SERVERS_CACHE_KEY = "serversCache";
 const cache = new Map();
 const lookupRequests = new Map();
 const lookupVersions = new Map();
 const groupedTabs = new Map();
-const defaults = { overlay: true, watermark: false, title: true, autoGroup: true, badge: "port" };
+const defaults = { overlay: true, watermark: false, title: true, autoGroup: true, badge: "port", language: "auto" };
 const settingKeys = new Set(Object.keys(defaults));
 const helperHeaders = { "X-Localhost-Worktree-Token": "branchport-v1" };
 let configCache = null;
@@ -175,7 +177,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
       .then(async (response) => ({ ok: response.ok, ...(await response.json()) }))
       .then(sendResponse)
-      .catch(() => sendResponse({ ok: false, error: "로컬 헬퍼에 연결하지 못했어요." }));
+      .catch(async () => sendResponse({ ok: false, error: translate(resolveLanguage((await settings()).language), "helperUnreachable") }));
     return true;
   }
   if (message.type === "LOCAL_ACTION") {
@@ -186,7 +188,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
       .then(async (response) => ({ ok: response.ok, ...(await response.json()) }))
       .then(sendResponse)
-      .catch(() => sendResponse({ ok: false, error: "로컬 헬퍼에 연결하지 못했어요." }));
+      .catch(async () => sendResponse({ ok: false, error: translate(resolveLanguage((await settings()).language), "helperUnreachable") }));
     return true;
   }
   if (message.type === "SAVE_SETTINGS") {
