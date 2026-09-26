@@ -116,4 +116,4 @@ All data and actions stay on the local machine. The helper exposes only `/health
 
 ## License
 
-No license has been granted yet.
+Branchport is released under the [MIT License](LICENSE).

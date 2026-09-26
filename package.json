@@ -1,8 +1,9 @@
 {
   "name": "branchport",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "packageManager": "pnpm@10.17.1",
   "description": "See which Git worktree and branch is serving each localhost port.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jikwon-labs/branchport.git"
