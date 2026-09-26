@@ -40,20 +40,20 @@ It adds a small label to localhost pages, prefixes tab titles with the current b
 
 ## Install
 
+1. Add Branchport from the [Chrome Web Store](https://chromewebstore.google.com/detail/branchport/lcfgllcanfffllgdbalehgdafanohngb).
+2. Install the local helper:
+
 ```bash
 npx branchport install
 ```
 
 This copies the helper to `~/.branchport` (Windows: `%LOCALAPPDATA%\Branchport`) and registers it as a background service. Run `npx branchport uninstall` to remove it.
 
-Then install the extension:
+Reload existing localhost tabs after installation.
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Select **Load unpacked**.
-4. Clone this repository and choose its `extension` directory.
+### Developing the extension
 
-The manifest public key keeps the unpacked extension ID fixed at `gclkmofklkhonlkneebngbdiblebeekk`. The helper accepts requests only from that ID and the Chrome Web Store ID, `lcfgllcanfffllgdbalehgdafanohngb`. Reload existing localhost tabs after installation.
+To run the extension from a checkout instead, open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose the repository's `extension` directory. The manifest public key keeps the unpacked extension ID fixed at `gclkmofklkhonlkneebngbdiblebeekk`. The helper accepts requests only from that ID and the Chrome Web Store ID, `lcfgllcanfffllgdbalehgdafanohngb`.
 
 ## Usage
 
