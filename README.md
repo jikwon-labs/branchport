@@ -4,6 +4,12 @@ Branchport is a Chrome extension for macOS, Linux, and Windows that shows which 
 
 It adds a small label to localhost pages, prefixes tab titles with the current branch, groups tabs by worktree, and provides a popup for inspecting and managing local development servers.
 
+## 한국어
+
+`localhost:3000`만 보고 지금 보는 화면이 어느 Git 브랜치에서 뜬 건지 헷갈린 적이 있다면 Branchport가 그 맥락을 브라우저에 바로 표시합니다.
+
+Branchport는 localhost 페이지에 현재 repository, worktree, branch, dirty state를 작은 라벨로 붙여주는 Chrome 확장입니다. 여러 worktree와 브랜치를 동시에 띄워 개발할 때 "이 탭, 어느 브랜치지?"를 바로 확인할 수 있습니다.
+
 <p align="center">
   <img src="docs/images/hero.png" width="900" alt="A localhost page with the Branchport label in the corner and the popup listing three worktree servers">
 </p>
