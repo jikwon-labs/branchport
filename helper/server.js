@@ -2,9 +2,9 @@ import http from "node:http";
 import { inspectAllPorts, inspectPort } from "./git-info.js";
 import { openLocalAction } from "./platform.js";
 import { extensionOrigin, isExtensionRequest } from "./auth.js";
+import { HELPER_PORT } from "./constants.js";
 
 const HOST = "127.0.0.1";
-const HELPER_PORT = Number(process.env.LOCAL_WORKTREE_HELPER_PORT || 32190);
 const lookupCache = new Map();
 const LOOKUP_CACHE_MS = 2000;
 let serversCache = null;
