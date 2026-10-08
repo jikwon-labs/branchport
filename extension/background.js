@@ -6,11 +6,11 @@ const cache = new Map();
 const lookupRequests = new Map();
 const lookupVersions = new Map();
 const groupedTabs = new Map();
-const defaults = { overlay: true, watermark: false, title: true, autoGroup: true, badge: "port", language: "auto" };
+const defaults = { overlay: true, watermark: false, title: true, autoGroup: true, badge: "port", language: "auto", docker: true };
 const settingKeys = new Set(Object.keys(defaults));
 const helperHeaders = { "X-Localhost-Worktree-Token": "branchport-v1" };
 let configCache = null;
-let serversRequest = null;
+const serversRequests = new Map();
 
 function localhostPort(rawUrl) {
   try {
@@ -74,31 +74,33 @@ function samePageInfo(previous, next) {
     .every((key) => previous[key] === next[key]);
 }
 
-function fetchPort(port) {
-  if (!lookupRequests.has(port)) {
-    const request = fetch(`${HELPER}/lookup?port=${port}`, {
+function fetchPort(port, docker) {
+  const key = `${port}:${docker}`;
+  if (!lookupRequests.has(key)) {
+    const request = fetch(`${HELPER}/lookup?port=${port}&docker=${docker ? 1 : 0}`, {
       cache: "no-store",
       headers: helperHeaders,
       signal: AbortSignal.timeout(15000),
     })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Worktree not found")))
-      .finally(() => lookupRequests.delete(port));
-    lookupRequests.set(port, request);
+      .finally(() => lookupRequests.delete(key));
+    lookupRequests.set(key, request);
   }
-  return lookupRequests.get(port);
+  return lookupRequests.get(key);
 }
 
-function fetchServers() {
-  if (!serversRequest) {
-    serversRequest = fetch(`${HELPER}/servers`, {
+function fetchServers(docker) {
+  if (!serversRequests.has(docker)) {
+    const request = fetch(`${HELPER}/servers?docker=${docker ? 1 : 0}`, {
       cache: "no-store",
       headers: helperHeaders,
       signal: AbortSignal.timeout(30000),
     })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Server scan failed")))
-      .finally(() => { serversRequest = null; });
+      .finally(() => serversRequests.delete(docker));
+    serversRequests.set(docker, request);
   }
-  return serversRequest;
+  return serversRequests.get(docker);
 }
 
 async function lookup(tabId, url) {
@@ -107,7 +109,7 @@ async function lookup(tabId, url) {
   const version = (lookupVersions.get(tabId) || 0) + 1;
   lookupVersions.set(tabId, version);
   try {
-    const info = { ...(await fetchPort(port)) };
+    const info = { ...(await fetchPort(port, (await settings()).docker)) };
     if (lookupVersions.get(tabId) !== version) return null;
     const previous = cache.get(tabId);
     if (previous?.branch && previous.branch !== info.branch) info.branchChangedFrom = previous.branch;
@@ -153,7 +155,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === "GET_SERVERS") {
-    fetchServers()
+    settings()
+      .then((config) => fetchServers(config.docker))
       .then(async (result) => {
         await chrome.storage.session.set({
           [SERVERS_CACHE_KEY]: { servers: result.servers || [], updatedAt: Date.now() },
@@ -184,7 +187,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     fetch(`${HELPER}/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...helperHeaders },
-      body: JSON.stringify({ port: message.port, pid: message.pid, action: message.action }),
+      body: JSON.stringify({ port: message.port, pid: message.pid, container: message.container, action: message.action }),
     })
       .then(async (response) => ({ ok: response.ok, ...(await response.json()) }))
       .then(sendResponse)
@@ -192,6 +195,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === "SAVE_SETTINGS") {
+    // Applied right away so a scan requested next sees the new Docker setting before
+    // storage.onChanged fires.
+    configCache = { ...defaults, ...configCache, ...message.settings };
     chrome.storage.sync.set(message.settings).then(() => sendResponse({ ok: true }));
     return true;
   }

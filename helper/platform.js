@@ -23,12 +23,16 @@ function addProcess(map, port, pid) {
   map.set(port, pids);
 }
 
-export function parseLsofProcesses(output) {
+// Each parser optionally records the listening process names in `commands`
+// (pid -> name) so Docker-owned ports can be recognized without extra calls.
+export function parseLsofProcesses(output, commands) {
   const result = new Map();
   let pid = null;
   for (const line of output.split("\n")) {
     if (line.startsWith("p")) {
       pid = Number(line.slice(1));
+    } else if (pid && line.startsWith("c")) {
+      commands?.set(pid, line.slice(1));
     } else if (pid && line.startsWith("n")) {
       const port = Number(line.match(/:(\d+)(?:$|\s)/)?.[1]);
       addProcess(result, port, pid);
@@ -37,11 +41,14 @@ export function parseLsofProcesses(output) {
   return result;
 }
 
-export function parseSsProcesses(output) {
+export function parseSsProcesses(output, commands) {
   const result = new Map();
   for (const line of output.split("\n")) {
     const port = Number(line.match(/(?:\]|[^\s]):(\d+)\s/)?.[1]);
-    for (const match of line.matchAll(/pid=(\d+)/g)) addProcess(result, port, Number(match[1]));
+    for (const match of line.matchAll(/(?:\("([^"]*)",)?pid=(\d+)/g)) {
+      addProcess(result, port, Number(match[2]));
+      if (match[1]) commands?.set(Number(match[2]), match[1]);
+    }
   }
   return result;
 }
@@ -60,19 +67,19 @@ async function powershell(script, timeout = 5000) {
   return run("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { timeout });
 }
 
-export async function getListeningProcesses() {
+export async function getListeningProcesses(commands) {
   if (process.platform === "win32") {
     const output = await powershell("Get-NetTCPConnection -State Listen | Select-Object LocalPort,OwningProcess | ConvertTo-Json -Compress");
     return parseWindowsConnections(output);
   }
   if (process.platform === "linux") {
     try {
-      return parseSsProcesses(await run("ss", ["-H", "-ltnp"]));
+      return parseSsProcesses(await run("ss", ["-H", "-ltnp"]), commands);
     } catch {
       // Some minimal distributions omit ss; lsof remains a supported fallback.
     }
   }
-  return parseLsofProcesses(await run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]));
+  return parseLsofProcesses(await run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpcn"]), commands);
 }
 
 function commandPathCandidates(commandLine = "") {
@@ -124,7 +131,7 @@ export async function getProcessCwdCandidates(pid) {
   return [];
 }
 
-function formatUptime(milliseconds) {
+export function formatUptime(milliseconds) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
   const hours = Math.floor(seconds / 3600);
   return `${hours}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;

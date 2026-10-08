@@ -1,4 +1,5 @@
 import path from "node:path";
+import { dockerServerInfo, getDockerPorts, isDockerProcess } from "./docker.js";
 import { getListeningProcesses, getProcessCwdCandidates, getProcessInfo, parseLsofProcesses, run } from "./platform.js";
 
 export function parsePids(output) {
@@ -68,8 +69,33 @@ async function readProcessInfo(pid) {
   return getProcessInfo(pid);
 }
 
+function readGitInfoCached(cwd, context) {
+  let gitPromise = context.gitByCwd?.get(cwd);
+  if (!gitPromise) {
+    gitPromise = readGitInfo(cwd);
+    context.gitByCwd?.set(cwd, gitPromise);
+  }
+  return gitPromise;
+}
+
+// Containers started by Docker Compose record the directory `docker compose up`
+// ran in; plain `docker run` containers have no such label and are skipped.
+async function inspectDockerPort(port, context) {
+  if (context.docker === false) return null;
+  const container = (await getDockerPorts()).get(port);
+  if (!container?.workingDir) return null;
+  const git = await readGitInfoCached(container.workingDir, context);
+  return git ? { port, ...git, ...dockerServerInfo(container) } : null;
+}
+
 async function inspectPortWithContext(port, context = {}) {
   const pids = context.pids || await findListeningPids(port);
+
+  // A Docker-owned port's process cwd belongs to Docker, never the project, and
+  // that process must not be offered for /kill.
+  if (pids.some((pid) => isDockerProcess(context.commands?.get(pid)))) {
+    return inspectDockerPort(port, context);
+  }
 
   for (const pid of pids) {
     let cwdPromise = context.cwdByPid?.get(pid);
@@ -79,12 +105,7 @@ async function inspectPortWithContext(port, context = {}) {
     }
     let git = null;
     for (const cwd of await cwdPromise) {
-      let gitPromise = context.gitByCwd?.get(cwd);
-      if (!gitPromise) {
-        gitPromise = readGitInfo(cwd);
-        context.gitByCwd?.set(cwd, gitPromise);
-      }
-      git = await gitPromise;
+      git = await readGitInfoCached(cwd, context);
       if (git) break;
     }
     if (!git) continue;
@@ -96,11 +117,18 @@ async function inspectPortWithContext(port, context = {}) {
     return { port, pid, ...git, ...(await processPromise) };
   }
 
-  return null;
+  // Windows reports no process names, so Docker Desktop ports land here.
+  return inspectDockerPort(port, context);
 }
 
-export async function inspectPort(port) {
-  return inspectPortWithContext(port);
+// `docker: false` skips the Docker lookup entirely; Docker-owned ports are then not listed.
+export async function inspectPort(port, { docker = true } = {}) {
+  const listening = await findListeningProcesses();
+  return inspectPortWithContext(port, {
+    docker,
+    commands: listening.commands,
+    pids: [...listening.processes.get(port) || []],
+  });
 }
 
 export async function findListeningPorts() {
@@ -112,10 +140,11 @@ export async function findListeningPorts() {
 }
 
 async function findListeningProcesses() {
+  const commands = new Map();
   try {
-    return await getListeningProcesses();
+    return { processes: await getListeningProcesses(commands), commands };
   } catch {
-    return new Map();
+    return { processes: new Map(), commands };
   }
 }
 
@@ -132,13 +161,13 @@ async function mapWithConcurrency(items, limit, mapper) {
   return results;
 }
 
-export async function inspectAllPorts(excludedPort) {
-  const listening = await findListeningProcesses();
-  const ports = [...listening.keys()].filter((port) => port !== excludedPort).sort((a, b) => a - b);
-  const context = { cwdByPid: new Map(), gitByCwd: new Map(), processByPid: new Map() };
+export async function inspectAllPorts(excludedPort, { docker = true } = {}) {
+  const { processes, commands } = await findListeningProcesses();
+  const ports = [...processes.keys()].filter((port) => port !== excludedPort).sort((a, b) => a - b);
+  const context = { cwdByPid: new Map(), gitByCwd: new Map(), processByPid: new Map(), commands, docker };
   const results = await mapWithConcurrency(ports, 6, (port) => inspectPortWithContext(port, {
     ...context,
-    pids: [...listening.get(port)],
+    pids: [...processes.get(port)],
   }));
   const servers = results.filter(Boolean).sort((a, b) => a.port - b.port);
   const byWorktree = new Map();

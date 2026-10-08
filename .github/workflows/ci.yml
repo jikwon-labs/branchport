@@ -29,6 +29,7 @@ jobs:
           node --check extension/popup.js
           node --check extension/i18n.js
           node --check helper/auth.js
+          node --check helper/docker.js
           node --check helper/git-info.js
           node --check helper/platform.js
           node --check helper/server.js

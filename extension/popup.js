@@ -64,7 +64,17 @@ function serverRow(info) {
   row.querySelector(".state").textContent = state;
   row.querySelector(".open").title = info.cwd;
   row.querySelector(".open").addEventListener("click", () => chrome.runtime.sendMessage({ type: "OPEN_SERVER", port: info.port }));
-  row.querySelector(".kill").addEventListener("click", async () => {
+  const isDocker = info.source === "docker";
+  if (isDocker) {
+    const tag = document.createElement("span");
+    tag.className = "docker";
+    tag.textContent = t("docker");
+    tag.title = t("dockerTitle");
+    row.querySelector(".folder").append(tag);
+    // Stopping would hit docker-proxy or Docker Desktop, not the container.
+    row.querySelector(".kill").remove();
+  }
+  row.querySelector(".kill")?.addEventListener("click", async () => {
     if (!confirm(t("confirmStop", info.port, info.branch))) return;
     const result = await chrome.runtime.sendMessage({ type: "KILL_SERVER", port: info.port, pid: info.pid });
     if (!result?.ok) alert(result?.error || t("stopFailed"));
@@ -73,7 +83,9 @@ function serverRow(info) {
   });
   const metrics = document.createElement("div");
   metrics.className = "metrics";
-  metrics.textContent = t("metrics", info.pid, info.uptime || "-", info.cpuPercent ?? "-", info.memoryMb ?? "-");
+  metrics.textContent = isDocker
+    ? t("dockerMetrics", info.container.name, info.container.service, info.uptime || "-")
+    : t("metrics", info.pid, info.uptime || "-", info.cpuPercent ?? "-", info.memoryMb ?? "-");
   row.append(metrics);
 
   const actions = document.createElement("div");
@@ -87,7 +99,7 @@ function serverRow(info) {
     button.className = "action";
     button.textContent = label;
     button.addEventListener("click", async () => {
-      const result = await chrome.runtime.sendMessage({ type: "LOCAL_ACTION", action, port: info.port, pid: info.pid });
+      const result = await chrome.runtime.sendMessage({ type: "LOCAL_ACTION", action, port: info.port, pid: info.pid, container: info.container?.id });
       if (!result?.ok) alert(result?.error || errorMessage);
     });
     actions.append(button);
@@ -126,7 +138,9 @@ async function loadServers({ showLoading = false } = {}) {
 
 function renderServers() {
   const query = document.getElementById("search").value.trim().toLowerCase();
-  const servers = allServers.filter((info) => `${info.port} ${info.repository} ${info.worktree} ${info.branch} ${info.cwd}`.toLowerCase().includes(query));
+  // Hiding Docker rows here makes turning the setting off instant, without a rescan flash.
+  const showDocker = document.getElementById("docker").checked;
+  const servers = allServers.filter((info) => (showDocker || info.source !== "docker") && `${info.port} ${info.repository} ${info.worktree} ${info.branch} ${info.cwd} ${info.container?.name || ""} ${info.container?.service || ""}`.toLowerCase().includes(query));
   serversElement.replaceChildren();
   if (!servers.length) {
     if (loadFailed) helperGuide();
@@ -148,20 +162,21 @@ async function initialize() {
 
   const current = await currentPromise;
   currentPort = current?.info?.port || null;
-  for (const key of ["overlay", "watermark", "title", "autoGroup"]) document.getElementById(key).checked = current.config[key];
+  for (const key of ["overlay", "watermark", "title", "autoGroup", "docker"]) document.getElementById(key).checked = current.config[key];
   document.getElementById("badge").value = current.config.badge;
   document.getElementById("language").value = current.config.language;
   if (allServers.length) renderServers();
   await loadServers({ showLoading: !allServers.length });
 }
 
-for (const key of ["overlay", "watermark", "title", "autoGroup", "badge", "language"]) {
+for (const key of ["overlay", "watermark", "title", "autoGroup", "docker", "badge", "language"]) {
   document.getElementById(key).addEventListener("change", async () => {
     const settings = {
       overlay: document.getElementById("overlay").checked,
       watermark: document.getElementById("watermark").checked,
       title: document.getElementById("title").checked,
       autoGroup: document.getElementById("autoGroup").checked,
+      docker: document.getElementById("docker").checked,
       badge: document.getElementById("badge").value,
       language: document.getElementById("language").value,
     };
@@ -169,7 +184,11 @@ for (const key of ["overlay", "watermark", "title", "autoGroup", "badge", "langu
       applyLanguage(settings.language);
       renderServers();
     }
+    if (key === "docker") renderServers();
     await chrome.runtime.sendMessage({ type: "SAVE_SETTINGS", settings });
+    // Turning it off only hides rows, so turning it back on shows them at once; a quiet
+    // rescan then brings them up to date.
+    if (key === "docker" && settings.docker) loadServers();
   });
 }
 document.getElementById("refresh").addEventListener("click", () => loadServers());
