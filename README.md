@@ -49,6 +49,8 @@ npx branchport install
 
 This copies the helper to `~/.branchport` (Windows: `%LOCALAPPDATA%\Branchport`) and registers it as a background service. Run `npx branchport uninstall` to remove it.
 
+The extension updates itself, but the helper does not. Run the same `npx branchport install` command to update the helper; the popup tells you when it is out of date.
+
 Reload existing localhost tabs after installation.
 
 ### Developing the extension

@@ -1,7 +1,8 @@
-importScripts("i18n.js");
+importScripts("i18n.js", "helper-version.js");
 
 const HELPER = "http://127.0.0.1:32190";
 const SERVERS_CACHE_KEY = "serversCache";
+const HEALTH_CACHE_MS = 60000;
 const cache = new Map();
 const lookupRequests = new Map();
 const lookupVersions = new Map();
@@ -11,6 +12,7 @@ const settingKeys = new Set(Object.keys(defaults));
 const helperHeaders = { "X-Localhost-Worktree-Token": "branchport-v1" };
 let configCache = null;
 let serversRequest = null;
+let healthCache = null;
 
 function localhostPort(rawUrl) {
   try {
@@ -101,6 +103,25 @@ function fetchServers() {
   return serversRequest;
 }
 
+// The helper only changes when the user reinstalls it, so one /health check covers many
+// popup refreshes. Only answers from a running helper are cached.
+function fetchHelperStatus({ refresh = false } = {}) {
+  if (!refresh && healthCache && (!healthCache.settled || healthCache.expiresAt > Date.now())) {
+    return healthCache.promise;
+  }
+  const entry = { expiresAt: 0, settled: false, promise: null };
+  entry.promise = fetch(`${HELPER}/health`, { cache: "no-store", signal: AbortSignal.timeout(5000) })
+    .then((response) => response.ok ? response.json() : null)
+    .catch(() => null)
+    .then((health) => {
+      entry.settled = true;
+      if (health) entry.expiresAt = Date.now() + HEALTH_CACHE_MS;
+      return helperStatus(health);
+    });
+  healthCache = entry;
+  return entry.promise;
+}
+
 async function lookup(tabId, url) {
   const port = localhostPort(url);
   if (!port || tabId == null) return null;
@@ -155,12 +176,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "GET_SERVERS") {
     fetchServers()
       .then(async (result) => {
+        // Checked only after a successful scan, so a stopped helper costs no extra requests.
+        const helper = await fetchHelperStatus({ refresh: message.refreshHelper });
         await chrome.storage.session.set({
           [SERVERS_CACHE_KEY]: { servers: result.servers || [], updatedAt: Date.now() },
         }).catch(() => {});
-        sendResponse(result);
+        sendResponse({ ...result, helper });
       })
-      .catch(() => sendResponse({ servers: [], error: true }));
+      .catch(() => {
+        // The helper may be restarting after an update, so check its version again next time.
+        healthCache = null;
+        sendResponse({ servers: [], error: true, helper: "unreachable" });
+      });
     return true;
   }
   if (message.type === "GET_CACHED_SERVERS") {
