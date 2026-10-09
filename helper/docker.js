@@ -3,6 +3,7 @@ import { formatUptime, run } from "./platform.js";
 
 const DOCKER_TIMEOUT_MS = 2000;
 const DOCKER_CACHE_MS = 2000;
+const DOCKER_FAILURE_CACHE_MS = 30000;
 const WORKING_DIR_LABEL = "com.docker.compose.project.working_dir";
 
 // Processes that publish container ports on the host: docker-proxy on Linux,
@@ -87,21 +88,29 @@ async function readDockerPorts() {
   return parseDockerInspect(output);
 }
 
-let dockerCache = null;
-
 // One `docker ps` per scan: concurrent callers share the in-flight request and
 // the result is reused briefly. A missing CLI or stopped daemon yields no ports.
-export function getDockerPorts() {
-  const now = Date.now();
-  if (dockerCache && (!dockerCache.settled || dockerCache.expiresAt > now)) return dockerCache.promise;
-  const entry = { expiresAt: Infinity, settled: false, promise: null };
-  entry.promise = readDockerPorts().catch(() => new Map()).finally(() => {
-    entry.settled = true;
-    entry.expiresAt = Date.now() + DOCKER_CACHE_MS;
-  });
-  dockerCache = entry;
-  return entry.promise;
+// Failures are remembered longer: after Docker Desktop quits, its socket file stays
+// behind and `docker ps` hangs until the timeout, which would otherwise delay every scan.
+export function createDockerPortsCache(read, now = Date.now) {
+  let cache = null;
+  return function getPorts() {
+    if (cache && (!cache.settled || cache.expiresAt > now())) return cache.promise;
+    const entry = { expiresAt: Infinity, settled: false, promise: null };
+    entry.promise = read().then(
+      (ports) => ({ ports, ttl: DOCKER_CACHE_MS }),
+      () => ({ ports: new Map(), ttl: DOCKER_FAILURE_CACHE_MS }),
+    ).then(({ ports, ttl }) => {
+      entry.settled = true;
+      entry.expiresAt = now() + ttl;
+      return ports;
+    });
+    cache = entry;
+    return entry.promise;
+  };
 }
+
+export const getDockerPorts = createDockerPortsCache(readDockerPorts);
 
 export function dockerServerInfo(container) {
   return {
