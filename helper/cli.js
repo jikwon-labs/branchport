@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const USAGE = "Usage: branchport <install|uninstall|start>";
+const USAGE = "Usage: branchport <install|uninstall|start|ls [port] [--json]>";
 const RUNTIME_FILES = [
-  "auth.js", "git-info.js", "platform.js", "server.js",
+  "auth.js", "constants.js", "git-info.js", "platform.js", "server.js",
   "install-launch-agent.sh", "uninstall-launch-agent.sh",
   "install-systemd-user.sh", "uninstall-systemd-user.sh",
   "install-scheduled-task.ps1", "uninstall-scheduled-task.ps1",
@@ -65,6 +65,10 @@ if (action === "install") {
   process.exit(status);
 } else if (action === "start") {
   await import("./server.js");
+} else if (action === "ls") {
+  const { runLs } = await import("./ls.js");
+  // exitCode instead of exit() so piped output is fully flushed.
+  process.exitCode = await runLs(process.argv.slice(3));
 } else {
   console.error(USAGE);
   process.exit(1);
