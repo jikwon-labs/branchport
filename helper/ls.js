@@ -44,6 +44,12 @@ export function shortenPath(value, home = os.homedir(), sep = path.sep) {
   return value.startsWith(home + sep) ? `~${value.slice(home.length)}` : value;
 }
 
+// Docker ports have no app PID, so the column names the Compose service instead.
+export function formatPid(info) {
+  if (info.source === "docker") return `docker:${info.container?.service || info.container?.name || "?"}`;
+  return String(info.pid ?? "-");
+}
+
 // Pads before painting so escape codes never count toward column widths.
 export function formatTable(servers, { color = false, home, sep } = {}) {
   const rows = servers.map((info) => [
@@ -51,7 +57,7 @@ export function formatTable(servers, { color = false, home, sep } = {}) {
     { text: info.branch, style: branchColor(info) },
     { text: formatStatus(info), style: info.dirty ? "orange" : null },
     { text: shortenPath(info.root, home, sep) },
-    { text: String(info.pid ?? "-") },
+    { text: formatPid(info) },
     { text: info.uptime || "-" },
   ]);
   const header = COLUMNS.map((text) => ({ text, style: "bold" }));
@@ -71,11 +77,18 @@ export function formatDetail(info, { color = false, home, sep } = {}) {
     ["Commit", info.commit],
     ["Worktree", shortenPath(info.root, home, sep)],
     ["Cwd", shortenPath(info.cwd, home, sep)],
-    ["PID", String(info.pid ?? "-")],
-    ["Uptime", info.uptime || "-"],
-    ["CPU", info.cpuPercent == null ? "-" : `${info.cpuPercent}%`],
-    ["Memory", info.memoryMb == null ? "-" : `${info.memoryMb} MB`],
-    ["Command", info.command || "-"],
+    ...(info.source === "docker" ? [
+      ["Container", info.container?.name || "-"],
+      ["Service", info.container?.service || "-"],
+      ["Image", info.container?.image || "-"],
+      ["Uptime", info.uptime || "-"],
+    ] : [
+      ["PID", String(info.pid ?? "-")],
+      ["Uptime", info.uptime || "-"],
+      ["CPU", info.cpuPercent == null ? "-" : `${info.cpuPercent}%`],
+      ["Memory", info.memoryMb == null ? "-" : `${info.memoryMb} MB`],
+      ["Command", info.command || "-"],
+    ]),
   ];
   if (info.duplicate) fields.push(["Also on", info.duplicatePorts.join(", ")]);
   const width = Math.max(...fields.map(([label]) => label.length));

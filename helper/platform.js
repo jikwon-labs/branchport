@@ -137,6 +137,14 @@ export function formatUptime(milliseconds) {
   return `${hours}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+// Converts ps etime ([[dd-]hh:]mm:ss) to milliseconds so every source shares formatUptime.
+export function parseEtime(etime) {
+  const match = /^(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)$/.exec(etime);
+  if (!match) return null;
+  const [, days = 0, hours = 0, minutes, seconds] = match.map((value) => value && Number(value));
+  return (((days * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000;
+}
+
 export async function getProcessInfo(pid) {
   try {
     if (process.platform === "win32") {
@@ -150,7 +158,9 @@ export async function getProcessInfo(pid) {
     }
     const output = await run("ps", ["-p", String(pid), "-o", "etime=,rss=,%cpu=,command="]);
     const match = output.match(/^(\S+)\s+(\d+)\s+([\d.]+)\s+(.+)$/);
-    return match ? { uptime: match[1], memoryMb: Math.round(Number(match[2]) / 1024), cpuPercent: Number(match[3]), command: match[4] } : {};
+    if (!match) return {};
+    const elapsed = parseEtime(match[1]);
+    return { uptime: elapsed == null ? match[1] : formatUptime(elapsed), memoryMb: Math.round(Number(match[2]) / 1024), cpuPercent: Number(match[3]), command: match[4] };
   } catch { return {}; }
 }
 
