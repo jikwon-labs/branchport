@@ -2,6 +2,7 @@ const serversElement = document.getElementById("servers");
 let currentPort = null;
 let allServers = [];
 let loadFailed = false;
+let helperOutdated = false;
 let loadVersion = 0;
 let language = resolveLanguage("auto");
 const t = (key, ...args) => translate(language, key, ...args);
@@ -24,14 +25,14 @@ const INSTALL_COMMAND = "npx branchport install";
 const HELPER_RETRY_MS = 3000;
 let helperRetryTimer = null;
 
-// Shown when the helper cannot be reached, which is also the first thing a new
-// Chrome Web Store user sees before installing it.
-function helperGuide() {
+// Installing and updating the helper use the same command. The install guide is also the
+// first thing a new Chrome Web Store user sees.
+function helperGuide(titleKey, noteKey) {
   const guide = document.createElement("div");
   guide.className = "guide";
   const title = document.createElement("div");
   title.className = "guide-title";
-  title.textContent = t("loadFailed");
+  title.textContent = t(titleKey);
   const command = document.createElement("div");
   command.className = "command";
   const code = document.createElement("code");
@@ -47,9 +48,15 @@ function helperGuide() {
   command.append(code, copy);
   const requirement = document.createElement("div");
   requirement.className = "guide-note";
-  requirement.textContent = t("helperRequirement");
+  requirement.textContent = t(noteKey);
   guide.append(title, command, requirement);
-  serversElement.replaceChildren(guide);
+  return guide;
+}
+
+function renderNotice() {
+  const notice = document.getElementById("notice");
+  if (helperOutdated) notice.replaceChildren(helperGuide("helperOutdated", "helperOutdatedNote"));
+  else notice.replaceChildren();
 }
 
 function serverRow(info) {
@@ -111,13 +118,15 @@ function serverRow(info) {
   return row;
 }
 
-async function loadServers({ showLoading = false } = {}) {
+async function loadServers({ showLoading = false, refreshHelper = false } = {}) {
   const version = ++loadVersion;
   if (showLoading) emptyMessage(t("loading"));
-  const result = await chrome.runtime.sendMessage({ type: "GET_SERVERS" });
+  const result = await chrome.runtime.sendMessage({ type: "GET_SERVERS", refreshHelper });
   if (version !== loadVersion) return;
   if (!result?.error || !allServers.length) allServers = result?.servers || [];
   loadFailed = Boolean(result?.error && !allServers.length);
+  if (!result?.error) helperOutdated = result?.helper === "outdated";
+  renderNotice();
   renderServers();
   // Keep checking while the guide is up so the list appears as soon as the helper starts.
   clearTimeout(helperRetryTimer);
@@ -129,7 +138,7 @@ function renderServers() {
   const servers = allServers.filter((info) => `${info.port} ${info.repository} ${info.worktree} ${info.branch} ${info.cwd}`.toLowerCase().includes(query));
   serversElement.replaceChildren();
   if (!servers.length) {
-    if (loadFailed) helperGuide();
+    if (loadFailed) serversElement.replaceChildren(helperGuide("loadFailed", "helperRequirement"));
     else emptyMessage(t(query ? "noResults" : "noServers"));
     return;
   }
@@ -167,11 +176,12 @@ for (const key of ["overlay", "watermark", "title", "autoGroup", "badge", "langu
     };
     if (key === "language") {
       applyLanguage(settings.language);
+      renderNotice();
       renderServers();
     }
     await chrome.runtime.sendMessage({ type: "SAVE_SETTINGS", settings });
   });
 }
-document.getElementById("refresh").addEventListener("click", () => loadServers());
+document.getElementById("refresh").addEventListener("click", () => loadServers({ refreshHelper: true }));
 document.getElementById("search").addEventListener("input", renderServers);
 initialize();

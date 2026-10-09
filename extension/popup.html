@@ -32,6 +32,10 @@
       .command { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid #334155; border-radius: 7px; background: #1e293b; }
       .command code { color: #93c5fd; font: 12px ui-monospace, monospace; }
       .guide-note { color: #64748b; font-size: 11px; }
+      #notice:empty { display: none; }
+      #notice { padding: 0 10px 7px; }
+      #notice .guide { padding: 10px; border: 1px solid #92400e; border-radius: 9px; background: #1c1917; }
+      #notice .guide-title { color: #fbbf24; }
       fieldset { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 0; padding: 11px 16px 14px; border: 0; border-top: 1px solid #334155; color: #cbd5e1; }
       label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
       select { color: #e2e8f0; border: 1px solid #475569; border-radius: 5px; background: #1e293b; }
@@ -40,6 +44,7 @@
   <body>
     <header><h1 data-i18n="serversTitle"></h1><button id="refresh" data-i18n="refresh"></button></header>
     <input id="search" type="search" />
+    <div id="notice"></div>
     <main id="servers"></main>
     <fieldset>
       <label><input id="overlay" type="checkbox" /> <span data-i18n="settingOverlay"></span></label>

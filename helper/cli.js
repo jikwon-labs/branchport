@@ -32,7 +32,9 @@ function copyRuntime(target) {
   fs.mkdirSync(helperDir, { recursive: true });
   for (const file of RUNTIME_FILES) fs.copyFileSync(path.join(sourceDir, file), path.join(helperDir, file));
   // The helper uses ES module syntax, which Node only honors under a "type": "module" package.
-  fs.writeFileSync(path.join(target, "package.json"), `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`);
+  // The version is carried over so the installed helper can report it on /health.
+  const { version } = JSON.parse(fs.readFileSync(path.join(sourceDir, "..", "package.json"), "utf8"));
+  fs.writeFileSync(path.join(target, "package.json"), `${JSON.stringify({ private: true, type: "module", version }, null, 2)}\n`);
   return helperDir;
 }
 
