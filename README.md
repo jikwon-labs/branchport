@@ -22,9 +22,10 @@ Branchport는 localhost 페이지에 현재 repository, worktree, branch, dirty 
 
 - Shows the repository, worktree, branch, dirty state, commit, and upstream divergence
 - Lists localhost servers with PID, uptime, CPU, and memory usage
+- Recognizes Docker Compose containers and tells apart the worktrees that started them, marked with a docker tag (can be turned off in the popup)
 - Groups Chrome tabs by worktree and warns about duplicate servers
 - Opens a server folder in Cursor or VS Code, Terminal, or Finder
-- Stops a server only after revalidating its port and PID
+- Stops a server only after revalidating its port and PID (Docker containers are never stopped)
 - Reduces background work with request coalescing, short-lived caching, and visibility-aware polling
 
 </td>
@@ -41,6 +42,7 @@ Branchport는 localhost 페이지에 현재 repository, worktree, branch, dirty 
 - Node.js 20 or newer
 - `git`
 - macOS: `lsof`
+- Optional: the `docker` CLI, to detect Docker Compose containers
 - Linux: `ss` (recommended) or `lsof`
 - Windows: PowerShell 5.1 or newer
 
@@ -67,7 +69,7 @@ To run the extension from a checkout instead, open `chrome://extensions`, enable
 
 Open any `localhost` or `127.0.0.1` page. The page label shows the worktree and branch; clicking it copies the working directory.
 
-The popup lists every detected Git-backed localhost server. Its settings control the page label, watermark, title prefix, automatic tab grouping, toolbar badge, and language. The language defaults to Chrome's UI language (English or Korean).
+The popup lists every detected Git-backed localhost server. Its settings control the page label, watermark, title prefix, automatic tab grouping, Docker container detection, toolbar badge, and language. The language defaults to Chrome's UI language (English or Korean).
 
 - `●`: uncommitted changes
 - `↑2`: two commits ahead of upstream
@@ -115,6 +117,8 @@ Colors follow the label rules above and are disabled when output is not a termin
 
 The helper binds only to `127.0.0.1:32190`. It uses `lsof` to map listening ports to processes, reads each process's working directory, and queries Git without modifying the detected project.
 
+When a port belongs to Docker (`docker-proxy` on Linux, Docker Desktop's `com.docker.backend` on macOS and Windows) or no Git worktree is found for its process, the helper asks Docker instead. One `docker ps` and one `docker inspect` per scan map published host ports to containers, and the Compose label `com.docker.compose.project.working_dir` supplies the worktree. Docker servers show the container, Compose service, and uptime instead of PID, CPU, and memory, and cannot be stopped from the popup. If the Docker CLI is missing or the daemon is not running, this step is skipped. Turning off **Docker containers** in the popup settings skips it as well, so the helper never runs `docker`.
+
 Visible tabs refresh every 5 seconds and hidden tabs every 30 seconds. Concurrent requests for the same port share one lookup, while full server scans reuse process and Git results with bounded concurrency.
 
 All data and actions stay on the local machine. The helper exposes only `/health` publicly; repository and process endpoints require the fixed Branchport Chrome extension origin and request token.
@@ -130,6 +134,10 @@ All data and actions stay on the local machine. The helper exposes only `/health
 - Servers running outside a Git worktree are not listed.
 - A server whose listening process has a different working directory may not be detected.
 - Windows does not expose another process's current working directory through `Win32_Process`; Branchport validates absolute paths found in the listening process and up to eight parent command lines. Servers launched without a project path in that chain may not be detected.
+- Docker containers are detected only when started with Docker Compose. Containers started with `docker run` have no `com.docker.compose.project.working_dir` label and are not listed.
+- A Compose container is attributed to the directory `docker compose up` ran in, so a compose file in a subdirectory shows that subdirectory as the worktree name.
+- Linux with Docker's userland proxy disabled (`"userland-proxy": false`) publishes ports without a listening process, so those containers are not listed.
+- Other container runtimes that expose a Docker-compatible CLI may work but are not tested.
 - The helper port is currently fixed at `32190` in both the helper and extension.
 
 ## License

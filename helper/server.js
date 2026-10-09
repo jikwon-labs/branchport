@@ -8,7 +8,7 @@ import { HELPER_PORT } from "./constants.js";
 const HOST = "127.0.0.1";
 const lookupCache = new Map();
 const LOOKUP_CACHE_MS = 2000;
-let serversCache = null;
+const serversCache = new Map();
 // Raise API_VERSION when the extension starts relying on a changed endpoint. The installed
 // copy reads its version from the package.json that `branchport install` writes beside it.
 const API_VERSION = 1;
@@ -36,40 +36,41 @@ function sendJson(request, response, status, body) {
   response.end(JSON.stringify(body));
 }
 
-function inspectPortCached(port) {
+// Results differ with the extension's Docker setting, so it is part of each cache key.
+function inspectPortCached(port, docker) {
   const now = Date.now();
-  for (const [cachedPort, entry] of lookupCache) {
-    if (entry.settled && entry.expiresAt <= now) lookupCache.delete(cachedPort);
+  for (const [key, entry] of lookupCache) {
+    if (entry.settled && entry.expiresAt <= now) lookupCache.delete(key);
   }
-  const cached = lookupCache.get(port);
+  const key = `${port}:${docker}`;
+  const cached = lookupCache.get(key);
   if (cached && (!cached.settled || cached.expiresAt > now)) return cached.promise;
   const entry = { expiresAt: Infinity, settled: false, promise: null };
-  const promise = inspectPort(port).catch((error) => {
-    lookupCache.delete(port);
+  const promise = inspectPort(port, { docker }).catch((error) => {
+    lookupCache.delete(key);
     throw error;
   }).finally(() => {
     entry.settled = true;
     entry.expiresAt = Date.now() + LOOKUP_CACHE_MS;
   });
   entry.promise = promise;
-  lookupCache.set(port, entry);
+  lookupCache.set(key, entry);
   return promise;
 }
 
-function inspectAllPortsCached() {
+function inspectAllPortsCached(docker) {
   const now = Date.now();
-  if (serversCache && (!serversCache.settled || serversCache.expiresAt > now)) {
-    return serversCache.promise;
-  }
+  const cached = serversCache.get(docker);
+  if (cached && (!cached.settled || cached.expiresAt > now)) return cached.promise;
   const entry = { expiresAt: Infinity, settled: false, promise: null };
-  entry.promise = inspectAllPorts(HELPER_PORT).catch((error) => {
-    if (serversCache === entry) serversCache = null;
+  entry.promise = inspectAllPorts(HELPER_PORT, { docker }).catch((error) => {
+    if (serversCache.get(docker) === entry) serversCache.delete(docker);
     throw error;
   }).finally(() => {
     entry.settled = true;
     entry.expiresAt = Date.now() + LOOKUP_CACHE_MS;
   });
-  serversCache = entry;
+  serversCache.set(docker, entry);
   return entry.promise;
 }
 
@@ -90,11 +91,15 @@ const server = http.createServer(async (request, response) => {
     try {
       const { port, pid } = await readBody(request);
       const current = await inspectPort(Number(port));
+      // Docker ports belong to docker-proxy or Docker Desktop, never the app itself.
+      if (current?.source === "docker") {
+        return sendJson(request, response, 409, { error: "Docker containers can't be stopped from Branchport" });
+      }
       if (!current || current.pid !== Number(pid) || current.pid === process.pid) {
         return sendJson(request, response, 409, { error: "The process no longer matches this port" });
       }
       process.kill(current.pid, "SIGTERM");
-      lookupCache.delete(current.port);
+      for (const key of lookupCache.keys()) if (key.startsWith(`${current.port}:`)) lookupCache.delete(key);
       return sendJson(request, response, 200, { ok: true, port: current.port, pid: current.pid });
     } catch (error) {
       return sendJson(request, response, 400, { error: error.message });
@@ -107,9 +112,12 @@ const server = http.createServer(async (request, response) => {
     }
 
     try {
-      const { port, pid, action } = await readBody(request);
+      const { port, pid, container, action } = await readBody(request);
       const current = await inspectPort(Number(port));
-      if (!current || current.pid !== Number(pid)) {
+      const matches = current?.source === "docker"
+        ? current.container.id === container
+        : current?.pid === Number(pid);
+      if (!matches) {
         return sendJson(request, response, 409, { error: "The process no longer matches this port" });
       }
       if (!["finder", "terminal", "editor"].includes(action)) {
@@ -133,9 +141,12 @@ const server = http.createServer(async (request, response) => {
     return sendJson(request, response, 403, { error: "Only the extension may access this helper" });
   }
 
+  // Older extensions omit the parameter, so Docker lookups stay on unless docker=0.
+  const docker = url.searchParams.get("docker") !== "0";
+
   if (url.pathname === "/servers") {
     try {
-      return sendJson(request, response, 200, { servers: await inspectAllPortsCached() });
+      return sendJson(request, response, 200, { servers: await inspectAllPortsCached(docker) });
     } catch (error) {
       return sendJson(request, response, 500, { error: error.message });
     }
@@ -148,7 +159,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     try {
-      const result = await inspectPortCached(port);
+      const result = await inspectPortCached(port, docker);
       return result
         ? sendJson(request, response, 200, result)
         : sendJson(request, response, 404, { error: "No Git worktree found for this port" });

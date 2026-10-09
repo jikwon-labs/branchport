@@ -31,6 +31,7 @@ jobs:
           node --check extension/helper-version.js
           node --check helper/auth.js
           node --check helper/constants.js
+          node --check helper/docker.js
           node --check helper/git-info.js
           node --check helper/ls.js
           node --check helper/platform.js

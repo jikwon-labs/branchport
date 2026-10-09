@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const USAGE = "Usage: branchport <install|uninstall|start|ls [port] [--json]>";
 const RUNTIME_FILES = [
-  "auth.js", "constants.js", "git-info.js", "platform.js", "server.js",
+  "auth.js", "constants.js", "docker.js", "git-info.js", "platform.js", "server.js",
   "install-launch-agent.sh", "uninstall-launch-agent.sh",
   "install-systemd-user.sh", "uninstall-systemd-user.sh",
   "install-scheduled-task.ps1", "uninstall-scheduled-task.ps1",
