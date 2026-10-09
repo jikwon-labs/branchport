@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { branchColor, formatDetail, formatStatus, formatTable, parseLsArgs, shortenPath, shouldUseColor } from "./ls.js";
+import { branchColor, formatDetail, formatPid, formatStatus, formatTable, parseLsArgs, shortenPath, shouldUseColor } from "./ls.js";
 
 const server = (overrides = {}) => ({
   port: 3000,
@@ -13,7 +13,7 @@ const server = (overrides = {}) => ({
   cwd: "/Users/me/projects/app",
   repository: "app",
   commit: "abc1234",
-  uptime: "01:02:03",
+  uptime: "1:02:03",
   duplicate: false,
   duplicatePorts: [],
   ...overrides,
@@ -61,12 +61,12 @@ test("shortenPath replaces the home directory with ~", () => {
 test("formatTable aligns columns without color", () => {
   const output = formatTable([
     server(),
-    server({ port: 5173, pid: 99, branch: "feat/ls", dirty: true, ahead: 2, root: "/Users/me/projects/app-ls", uptime: "12:00" }),
+    server({ port: 5173, pid: 99, branch: "feat/ls", dirty: true, ahead: 2, root: "/Users/me/projects/app-ls", uptime: "0:12:00" }),
   ], { home: "/Users/me", sep: "/" });
   assert.equal(output, [
     "PORT  BRANCH   STATUS  WORKTREE           PID   UPTIME",
-    "3000  main     -       ~/projects/app     4321  01:02:03",
-    "5173  feat/ls  ● ↑2    ~/projects/app-ls  99    12:00",
+    "3000  main     -       ~/projects/app     4321  1:02:03",
+    "5173  feat/ls  ● ↑2    ~/projects/app-ls  99    0:12:00",
   ].join("\n"));
 });
 
@@ -85,6 +85,34 @@ test("formatDetail lists one server and its duplicates", () => {
   assert.match(output, /^Memory {6}120 MB$/m);
   assert.match(output, /^Also on {5}3001$/m);
   assert.doesNotMatch(output, /\x1b/);
+});
+
+const dockerServer = (overrides = {}) => server({
+  pid: null,
+  source: "docker",
+  container: { id: "b601fc08af12", name: "app-web-1", service: "web", project: "app", image: "nginx:alpine" },
+  ...overrides,
+});
+
+test("formatPid names the Compose service for Docker ports", () => {
+  assert.equal(formatPid(server()), "4321");
+  assert.equal(formatPid(server({ pid: null })), "-");
+  assert.equal(formatPid(dockerServer()), "docker:web");
+  assert.equal(formatPid(dockerServer({ container: { name: "solo" } })), "docker:solo");
+});
+
+test("formatTable marks Docker ports in the PID column", () => {
+  const output = formatTable([server(), dockerServer({ port: 8081 })], { home: "/Users/me", sep: "/" });
+  assert.match(output, /^8081 .* docker:web +1:02:03$/m);
+});
+
+test("formatDetail shows the container instead of process metrics for Docker ports", () => {
+  const output = formatDetail(dockerServer(), { home: "/Users/me", sep: "/" });
+  assert.match(output, /^Container {3}app-web-1$/m);
+  assert.match(output, /^Service {5}web$/m);
+  assert.match(output, /^Image {7}nginx:alpine$/m);
+  assert.match(output, /^Uptime {6}1:02:03$/m);
+  assert.doesNotMatch(output, /^(PID|CPU|Memory|Command) /m);
 });
 
 test("parseLsArgs accepts a port and --json in any order", () => {

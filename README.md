@@ -111,7 +111,7 @@ npx branchport ls 5173        # Details for one port (exits 1 if nothing is list
 npx branchport ls --json      # Raw data for scripts; combine with a port for one object
 ```
 
-Colors follow the label rules above and are disabled when output is not a terminal or `NO_COLOR` is set. The helper's own port is never listed.
+Colors follow the label rules above and are disabled when output is not a terminal or `NO_COLOR` is set. The helper's own port is never listed. Docker Compose ports show `docker:<service>` in the PID column, and their details list the container, service, and image instead of process metrics.
 
 ## How it works
 
