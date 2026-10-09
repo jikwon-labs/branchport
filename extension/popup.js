@@ -3,6 +3,7 @@ let currentPort = null;
 let allServers = [];
 let loadFailed = false;
 let helperOutdated = false;
+let helperStopped = false;
 let loadVersion = 0;
 let language = resolveLanguage("auto");
 const t = (key, ...args) => translate(language, key, ...args);
@@ -55,7 +56,8 @@ function helperGuide(titleKey, noteKey) {
 
 function renderNotice() {
   const notice = document.getElementById("notice");
-  if (helperOutdated) notice.replaceChildren(helperGuide("helperOutdated", "helperOutdatedNote"));
+  if (helperStopped) notice.replaceChildren(helperGuide("helperStopped", "helperStoppedNote"));
+  else if (helperOutdated) notice.replaceChildren(helperGuide("helperOutdated", "helperOutdatedNote"));
   else notice.replaceChildren();
 }
 
@@ -137,12 +139,14 @@ async function loadServers({ showLoading = false, refreshHelper = false } = {}) 
   if (version !== loadVersion) return;
   if (!result?.error || !allServers.length) allServers = result?.servers || [];
   loadFailed = Boolean(result?.error && !allServers.length);
+  // A failed scan keeps the last list (often the cached one), so say it is stale.
+  helperStopped = Boolean(result?.error && allServers.length);
   if (!result?.error) helperOutdated = result?.helper === "outdated";
   renderNotice();
   renderServers();
   // Keep checking while the guide is up so the list appears as soon as the helper starts.
   clearTimeout(helperRetryTimer);
-  if (loadFailed) helperRetryTimer = setTimeout(() => loadServers(), HELPER_RETRY_MS);
+  if (loadFailed || helperStopped) helperRetryTimer = setTimeout(() => loadServers(), HELPER_RETRY_MS);
 }
 
 function renderServers() {
