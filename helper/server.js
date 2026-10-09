@@ -1,13 +1,18 @@
+import fs from "node:fs";
 import http from "node:http";
 import { inspectAllPorts, inspectPort } from "./git-info.js";
 import { openLocalAction } from "./platform.js";
 import { extensionOrigin, isExtensionRequest } from "./auth.js";
+import { HELPER_PORT } from "./constants.js";
 
 const HOST = "127.0.0.1";
-const HELPER_PORT = Number(process.env.LOCAL_WORKTREE_HELPER_PORT || 32190);
 const lookupCache = new Map();
 const LOOKUP_CACHE_MS = 2000;
 const serversCache = new Map();
+// Raise API_VERSION when the extension starts relying on a changed endpoint. The installed
+// copy reads its version from the package.json that `branchport install` writes beside it.
+const API_VERSION = 1;
+const { version: HELPER_VERSION = null } = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 async function readBody(request) {
   let body = "";
@@ -127,7 +132,10 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method !== "GET") return sendJson(request, response, 405, { error: "Method not allowed" });
 
-  if (url.pathname === "/health") return sendJson(request, response, 200, { ok: true });
+  // /health is the only unauthenticated endpoint, so it reports versions and nothing else.
+  if (url.pathname === "/health") {
+    return sendJson(request, response, 200, { ok: true, version: HELPER_VERSION, apiVersion: API_VERSION });
+  }
 
   if (!isExtensionRequest(request.headers)) {
     return sendJson(request, response, 403, { error: "Only the extension may access this helper" });

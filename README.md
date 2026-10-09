@@ -57,6 +57,8 @@ npx branchport install
 
 This copies the helper to `~/.branchport` (Windows: `%LOCALAPPDATA%\Branchport`) and registers it as a background service. Run `npx branchport uninstall` to remove it.
 
+The extension updates itself, but the helper does not. Run the same `npx branchport install` command to update the helper; the popup tells you when it is out of date.
+
 Reload existing localhost tabs after installation.
 
 ### Developing the extension
@@ -100,6 +102,16 @@ pnpm helper:uninstall # Remove the helper service
 pnpm test             # Run unit tests
 pnpm package:extension # Build the Chrome Web Store zip in dist/
 ```
+
+List detected servers from the terminal. This reads ports and Git directly, so it works even when the helper service is not installed or running:
+
+```bash
+npx branchport ls             # Table of PORT, BRANCH, STATUS, WORKTREE, PID, UPTIME
+npx branchport ls 5173        # Details for one port (exits 1 if nothing is listening)
+npx branchport ls --json      # Raw data for scripts; combine with a port for one object
+```
+
+Colors follow the label rules above and are disabled when output is not a terminal or `NO_COLOR` is set. The helper's own port is never listed.
 
 ## How it works
 

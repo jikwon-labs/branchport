@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const USAGE = "Usage: branchport <install|uninstall|start>";
+const USAGE = "Usage: branchport <install|uninstall|start|ls [port] [--json]>";
 const RUNTIME_FILES = [
-  "auth.js", "docker.js", "git-info.js", "platform.js", "server.js",
+  "auth.js", "constants.js", "docker.js", "git-info.js", "platform.js", "server.js",
   "install-launch-agent.sh", "uninstall-launch-agent.sh",
   "install-systemd-user.sh", "uninstall-systemd-user.sh",
   "install-scheduled-task.ps1", "uninstall-scheduled-task.ps1",
@@ -32,7 +32,9 @@ function copyRuntime(target) {
   fs.mkdirSync(helperDir, { recursive: true });
   for (const file of RUNTIME_FILES) fs.copyFileSync(path.join(sourceDir, file), path.join(helperDir, file));
   // The helper uses ES module syntax, which Node only honors under a "type": "module" package.
-  fs.writeFileSync(path.join(target, "package.json"), `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`);
+  // The version is carried over so the installed helper can report it on /health.
+  const { version } = JSON.parse(fs.readFileSync(path.join(sourceDir, "..", "package.json"), "utf8"));
+  fs.writeFileSync(path.join(target, "package.json"), `${JSON.stringify({ private: true, type: "module", version }, null, 2)}\n`);
   return helperDir;
 }
 
@@ -63,6 +65,10 @@ if (action === "install") {
   process.exit(status);
 } else if (action === "start") {
   await import("./server.js");
+} else if (action === "ls") {
+  const { runLs } = await import("./ls.js");
+  // exitCode instead of exit() so piped output is fully flushed.
+  process.exitCode = await runLs(process.argv.slice(3));
 } else {
   console.error(USAGE);
   process.exit(1);
